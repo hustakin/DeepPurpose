@@ -551,7 +551,7 @@ class DBTA:
 			writer.close()
           
 
-	def predict(self, df_data):
+	def predict(self, df_data, repurposing_mode = True, test = False):
 		'''
 			utils.data_process_repurpose_virtual_screening 
 			pd.DataFrame
@@ -572,7 +572,7 @@ class DBTA:
 
 		generator = data.DataLoader(info, **params)
 
-		score = self.test_(generator, self.model, repurposing_mode = True)
+		score = self.test_(generator, self.model, repurposing_mode, test)
 		return score
 
 	def save_model(self, path_dir):
