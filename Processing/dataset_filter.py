@@ -152,6 +152,7 @@ def filter_data(path = None, y = 'Kd'):
 
 def process_duplicates(drugs, targets, labels):
     '''
+        Processing the dataset regarding duplicate Drug&Target pairs and return lots of different dataframes
         Return
             1. basic dataset: Drug, Target, Label, Length of Drug, Length of Target
             2. distinct Drug&Target&Label pairs together with duplicate times: Drug, Target, Label, Length of Drug, Length of Target
@@ -175,6 +176,9 @@ def process_duplicates(drugs, targets, labels):
     return df_compact, df_compact_distinct, df_group, df_dup_ids, df_compact_dup
 
 def process_label_duplicates(drugs, targets, labels):
+    '''
+        Group by Drug&Target to get the mean of Label values for each distinct Drug&Target pair
+    '''
     print('Set label to logspace (nM -> p) for easier regression')
     y = convert_y_unit(labels.values, 'nM', 'p')
     df_p = pd.DataFrame(zip(drugs, targets, y), columns=['Drug','Target','Label'])
@@ -182,16 +186,43 @@ def process_label_duplicates(drugs, targets, labels):
     print('There are ' + str(len(df_p)) + ' drug target pairs after (nM -> p) and group&mean.')
     return df_p
 
+def extract_duplicates(drugs, targets, labels):
+    '''
+        Group by Drug&Target to get the min/max/mean of Label values for each duplicated Drug&Target pair
+    '''
+    print('Set label to logspace (nM -> p) for easier regression')
+    y = convert_y_unit(labels.values, 'nM', 'p')
+    df_p = pd.DataFrame(zip(drugs, targets, y), columns=['Drug','Target','Label'])
+    
+    df_group = df_p.groupby(['Drug','Target']).size()
+    df_dup_ids = df_group[df_group>1].reset_index()[['Drug','Target']]
+    df_dup = pd.merge(df_dup_ids,df_p,on=['Drug','Target'])
+    
+    def diff(x):
+        return x.max() - x.min()
+
+    df_agg = df_dup.groupby(['Drug','Target']).agg({'Label': ['min', 'max', 'count', 'median', 'mean', diff]}).reset_index()
+    print('There are ' + str(len(df_agg)) + ' duplicated drug target pairs after (nM -> p) and group&min&max&mean.')
+    return df_agg
+
 def cutoff_by_length(drugs, targets, labels):
+    '''
+        Remove too short/long length of Drug or Target pairs
+        To keep the length of Drug in [5,150] and length of Target in [50,1500]
+    '''
     df_p = pd.DataFrame(zip(drugs, targets, labels), columns=['Drug','Target','Label'])
     df_p['Length of Drug'] = drugs.apply(lambda x: len(str(x)))
     df_p['Length of Target'] = targets.apply(lambda x: len(str(x)))
-    df_p = df_p[(df_p['Length of Drug'] >= 5) & (df_p['Length of Drug'] <= 200) & (df_p['Length of Target'] >= 50) & (df_p['Length of Target'] <= 2000)]
+    df_p = df_p[(df_p['Length of Drug'] >= 5) & (df_p['Length of Drug'] <= 150) & (df_p['Length of Target'] >= 50) & (df_p['Length of Target'] <= 1500)]
     print('There are ' + str(len(df_p)) + ' drug target pairs after cutoff.')
     return df_p
 
 def preprocessing_BindingDB_kdki(path = None):
-
+    '''
+        1. Get Kd dataset and Ki dataset and concat them to be in one dataset
+        2. Cutoff the dataset by length of Drug and Target to get the final dataset
+        3. Group by Drug&Target to get the mean of Label values for each distinct Drug&Target pair
+    '''
     print('Loading Kd Dataset from path...')
     df_kd = filter_data(path, y='Kd')
     df_kd_compact, _, _, _, _ = process_duplicates(df_kd['SMILES'], df_kd['Target Sequence'], df_kd['Label'])
@@ -204,7 +235,31 @@ def preprocessing_BindingDB_kdki(path = None):
     df_kdki = pd.concat([df_kd_compact, df_ki_compact])
     df_kdki_compact, _, _, _, _ = process_duplicates(df_kdki['Drug'], df_kdki['Target'], df_kdki['Label'])
 
-    df_p = process_label_duplicates(df_kdki_compact['Drug'], df_kdki_compact['Target'], df_kdki_compact['Label'])
-    df_p = cutoff_by_length(df_p['Drug'], df_p['Target'], df_p['Label'])
+    df_p = cutoff_by_length(df_kdki_compact['Drug'], df_kdki_compact['Target'], df_kdki_compact['Label'])
+    df_p = process_label_duplicates(df_p['Drug'], df_p['Target'], df_p['Label'])
+
+    return df_p
+
+def extract_duplicates_BindingDB_kdki(path = None):
+    '''
+        1. Get Kd dataset and Ki dataset and concat them to be in one dataset
+        2. Cutoff the dataset by length of Drug and Target to get the final dataset
+        3. Group by Drug&Target to get the min/max/mean of Label values for each distinct Drug&Target pair
+        4. Get all Drug&Target duplicated pairs
+    '''
+    print('Loading Kd Dataset from path...')
+    df_kd = filter_data(path, y='Kd')
+    df_kd_compact, _, _, _, _ = process_duplicates(df_kd['SMILES'], df_kd['Target Sequence'], df_kd['Label'])
+
+    print('Loading Ki Dataset from path...')
+    df_ki = filter_data(path, y='Ki')
+    df_ki_compact, _, _, _, _ = process_duplicates(df_ki['SMILES'], df_ki['Target Sequence'], df_ki['Label'])
+
+    print('Combine Kd and Ki Dataset and preprocess them...')
+    df_kdki = pd.concat([df_kd_compact, df_ki_compact])
+    df_kdki_compact, _, _, _, _ = process_duplicates(df_kdki['Drug'], df_kdki['Target'], df_kdki['Label'])
+
+    df_p = cutoff_by_length(df_kdki_compact['Drug'], df_kdki_compact['Target'], df_kdki_compact['Label'])
+    df_p = extract_duplicates(df_p['Drug'], df_p['Target'], df_p['Label'])
 
     return df_p
