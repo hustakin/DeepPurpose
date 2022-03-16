@@ -454,6 +454,31 @@ def load_IC50_1000_Samples(path = './data', n=100):
 	df = pd.read_csv(download_path).sample(n = n, replace = False).reset_index(drop = True)
 	return df['Target Sequence'].values, df['SMILES'].values
 
+# Added by YS on 26Jan2022
+def load3_r10k_kdki(path = './data', n=10000):
+	if not os.path.exists(path):
+	    os.makedirs(path)
+	file_path = os.path.join(path, 'kdki3_r10k.csv')
+	df = pd.read_csv(file_path).sample(n = n, replace = False).reset_index(drop = True)
+	return df['Drug'].values, df['Target'].values, df['Label'].values
+# Added by YS on 26Jan2022
+
+
+# Added by YS on 5Feb2022
+def load_18ligs_r500k_hARM(path = './data', n=500018):
+	if not os.path.exists(path):
+	    os.makedirs(path)
+	file_path = os.path.join(path, '18ligs_r500k.csv')
+	df = pd.read_csv(file_path, dtype=object).sample(n = n, replace = False).reset_index(drop = True)
+	target_seq = 'EVQDALERALPELQQALSALKQAGGARAVGAGLAEVFQLVEEAWLLPAVGREVAQGLCDAIRLDGGLDLLLRLLQAPELETRVQAARLLEQILVAENRDRVARIGLGVILNLAKEREPVELARSVAGILEHMFKHSEETCQRLVAAGGLDAVLYWCRRTDPALLRHCALALGNCALHGGQAVQRRMVEKRAAEWLFPLAFSKEDELLRLHACLAVAVLATNKEVEREVERSGTLALVEPLVASLDPGRFARCLVDASDTSQGRGPDDLQRLVPLLDSNRLEAQCIGAFYLCAEAAIKSLQGKTKVFSDIGAIQSLKRLVSYSTNGTKSALAKRALRLLGEEVP'
+	target_name = 'hARM'
+	list_target_seq = n * [target_seq]
+	list_target_name = n * [target_name]
+	return list_target_seq, df['SMILES'].values, list_target_name, df['ZINC_ID'].values
+# Added by YS on 5Feb2022
+
+
+
 def load_SARS_CoV_Protease_3CL():
 	target = 'SGFKKLVSPSSAVEKCIVSVSYRGNNLNGLWLGDSIYCPRHVLGKFSGDQWGDVLNLANNHEFEVVTQNGVTLNVVSRRLKGAVLILQTAVANAETPKYKFVKANCGDSFTIACSYGGTVIGLYPVTMRSNGTIRASFLAGACGSVGFNIEKGVVNFFYMHHLELPNALHTGTDLMGEFYGGYVDEEVAQRVPPDNLVTNNIVAWLYAAIISVKESSFSQPKWLESTTVSIEDYNRWASDNGFTPFSTSTAITKLSAITGVDVCKLLRTIMVKSAQWGSDPILGQYNFEDELTPESVFNQVGGVRLQ'
 	target_name = 'SARS-CoV 3CL Protease'
